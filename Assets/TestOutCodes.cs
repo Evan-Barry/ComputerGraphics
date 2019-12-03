@@ -14,6 +14,7 @@ public class TestOutCodes : MonoBehaviour
     Color defaultColour;
     public float rotationRate = 1;
     public Vector3 rotationAxis = new Vector3(0f, 0f, 0f);
+    public Light light;
     // Start is called before the first frame update
     void Start()
     {
@@ -35,21 +36,7 @@ public class TestOutCodes : MonoBehaviour
         cube[6] = new Vector3(-1f, -1f, -1);
         cube[7] = new Vector3(1f, -1f, -1);
 
-       // cube = applyViewingMatrix(cube);
-
-       // cube = applyProjectionMatrix(cube);
-
-        //cube = applyTranslateMatrix(cube, 5f, -5f, 0f);
-
-        //cube = applyRotationMatrix(cube);
-
-       // cube = divideByZ(cube);
-
-       // drawCube(cube);
-
-        //floodFill(resWidth / 2, resHeight / 2, Color.green, defaultColour, screen);
-
-       // screen.Apply();
+        cube = applyTranslateMatrix(cube, 2f, 2f, 0);
     }
 
     private void drawLine(Vector2 v1, Vector2 v2, Texture2D screen)
@@ -58,11 +45,8 @@ public class TestOutCodes : MonoBehaviour
 
         if (lineClip(ref start, ref end))
         {
-            //print(start.ToString() + " " + end.ToString());
-
             List<Vector2Int> breshList01 = Breshenham(convertToScreenPoint(start), convertToScreenPoint(end));
             displayBresh(screen, breshList01);
-
         }
         else
         {
@@ -78,7 +62,6 @@ public class TestOutCodes : MonoBehaviour
 
         if ((u_outcode + v_outcode) == inViewport)
         {
-            //print("TA");
             return true;
         }
 
@@ -148,7 +131,7 @@ public class TestOutCodes : MonoBehaviour
     private static Vector2 intercept(Vector3 u, Vector3 v, int edge)
     {
         float m = (v.y - u.y)/(v.x - u.x);
-        // top = 0, bottom = 1, left = 2, right = 3
+
         if(edge == 0)
         {
             return new Vector2(u.x + (1 / m) * (1 - u.y), 1);
@@ -350,17 +333,11 @@ public class TestOutCodes : MonoBehaviour
         //Front
         //t1
         drawFace(cube[0], cube[1], cube[2]);
-        //Vector2 ft1Center = getCenter(cube[0], cube[1], cube[2]);
 
         //t2
         drawFace(cube[0], cube[2], cube[3]);
 
-        //print(ft1Cross);
-        //ft1Center = convertToScreenPoint(ft1Center);
-        //floodFill((int)ft1Center.x, (int)ft1Center.y, Color.green, defaultColour, screen);
-
         //Right
-
         //t1
         drawFace(cube[4], cube[0], cube[3]);
         //t2
@@ -368,7 +345,6 @@ public class TestOutCodes : MonoBehaviour
 
 
         //Top
-
         //t1
         drawFace(cube[4], cube[5], cube[1]);
 
@@ -376,7 +352,6 @@ public class TestOutCodes : MonoBehaviour
         drawFace(cube[4], cube[1], cube[0]);
 
         //Back
-
         //t1
         drawFace(cube[5], cube[4], cube[7]);
 
@@ -384,7 +359,6 @@ public class TestOutCodes : MonoBehaviour
         drawFace(cube[5], cube[7], cube[6]);
 
         //Left
-
         //t1
         drawFace(cube[1], cube[5], cube[6]);
 
@@ -392,7 +366,6 @@ public class TestOutCodes : MonoBehaviour
         drawFace(cube[1], cube[6], cube[2]);
 
         //Bottom
-
         //t1
         drawFace(cube[6], cube[7], cube[3]);
 
@@ -402,8 +375,6 @@ public class TestOutCodes : MonoBehaviour
 
     public void drawFace(Vector2 i, Vector2 j, Vector2 k)
     {
-        //Vector3 Cross = new Vector3((j.x * k.y) - (j.y * k.x), (i.y * k.x) - (i.x * k.y), (i.x * j.y) - (j.x * i.y));
-
         float z = (j.x - i.x)*(k.y - j.y) - (j.y - i.y)*(k.x - j.x);
 
         if (z >= 0)
@@ -414,7 +385,12 @@ public class TestOutCodes : MonoBehaviour
 
             Vector2 Center = getCenter(i, j, k);
             Center = convertToScreenPoint(Center);
-            floodFillStack((int)Center.x, (int)Center.y, Color.green, defaultColour);
+            Vector3 normal = getNormal(i, j, k);
+            Vector3 lightDir = getLightDir(Center);
+            float dotProduct = Vector3.Dot(lightDir, normal);
+            Color reflection = new Color(dotProduct * Color.green.r * light.intensity, dotProduct * Color.green.g * light.intensity, dotProduct * Color.green.b * light.intensity, 1);
+            print(reflection);
+            floodFillStack((int)Center.x, (int)Center.y, reflection, defaultColour);
         }
     }
 
@@ -423,110 +399,14 @@ public class TestOutCodes : MonoBehaviour
         return new Vector2((p1.x + p2.x + p3.x) / 3, (p1.y + p2.y + p3.y) / 3);
     }
 
-    static void floodFillUtil(int x, int y, Color newColour, Color oldColour, Texture2D screen)
+    public Vector3 getNormal(Vector2 a, Vector2 b, Vector2 c)
     {
-        //print("Center - " + ourScreen.bounds.center);
-        //print("Extents - " + ourScreen.bounds.extents);
-        //print("Max - " + ourScreen.bounds.max);
-        //print("Min - " + ourScreen.bounds.min);
-        //print("Size - " + ourScreen.bounds.size);
-
-        if ((x < 0) || (x >= resWidth-1))
-        {
-            return;
-        }
-
-        if ((y < 0) || (y >= resHeight-1))
-        {
-            return;
-        }
-
-        if (screen.GetPixel(x, y) != oldColour)
-        {
-            return;
-        }
-        
-        else
-        {
-            screen.SetPixel(x, y, newColour);
-            floodFillUtil(x + 1, y, newColour, oldColour, screen);//w
-            floodFillUtil(x - 1, y, newColour, oldColour, screen);//e
-            floodFillUtil(x, y + 1, newColour, oldColour, screen);//s
-            floodFillUtil(x, y - 1, newColour, oldColour, screen);//n
-        }
-        
-        
+        return Vector3.Normalize(Vector3.Cross(b - a, c - a));
     }
 
-    static void floodFill(Texture2D screen, int x, int y, Color newColour, Color oldColour)
+    public Vector3 getLightDir(Vector3 center)
     {
-        //Color oldColour = screen.GetPixel(x,y);
-
-        floodFillUtil(x, y, newColour, oldColour, screen);
-    }
-
-    public void floodFillBFS(int x, int y, Color newColour, Color oldColour)
-    {
-        Queue<Vector2> q = new Queue<Vector2>();
-
-        q.Enqueue(new Vector2(x, y));
-
-        while(q.Count > 0)
-        {
-            Vector2 v = q.Dequeue();
-
-            int vx = (int)v.x;
-            int vy = (int)v.y;
-            
-            if(screen.GetPixel(vx, vy) == newColour)
-            {
-                return;
-            }
-
-            screen.SetPixel(vx, vy, newColour);
-
-            Vector2 newV = new Vector2(vx + 1, vy);
-            if(checkBounds(newV))
-            {
-                //print(vx + 1 + " " + vy + " in bounds");
-                if(screen.GetPixel((int)newV.x, (int)newV.y) == oldColour)
-                {
-                    print(newV + " queued");
-                    q.Enqueue(new Vector2((int)newV.x, (int)newV.y));
-                }
-            }
-
-            newV = new Vector2(vx - 1, vy);
-            if (checkBounds(newV))
-            {
-                //print(vx - 1 + " " + vy + " in bounds");
-                if (screen.GetPixel((int)newV.x, (int)newV.y) == oldColour)
-                {
-                    print(newV + " queued");
-                    q.Enqueue(new Vector2((int)newV.x, (int)newV.y));
-                }
-            }
-
-            newV = new Vector2(vx, vy + 1);
-            if (checkBounds(newV))
-            {
-                if (screen.GetPixel((int)newV.x, (int)newV.y) == oldColour)
-                {
-                    print(newV + " queued");
-                    q.Enqueue(new Vector2((int)newV.x, (int)newV.y));
-                }
-            }
-
-            newV = new Vector2(vx, vy - 1);
-            if (checkBounds(newV))
-            {
-                if (screen.GetPixel((int)newV.x, (int)newV.y) == oldColour)
-                {
-                    print(newV + " queued");
-                    q.Enqueue(new Vector2((int)newV.x, (int)newV.y));
-                }
-            }
-        }
+        return Vector3.Normalize((center - light.transform.position));
     }
 
     public void floodFillStack(int x, int y, Color newColour, Color oldColour)
@@ -579,17 +459,10 @@ public class TestOutCodes : MonoBehaviour
         angle += rotationRate;
         Matrix4x4 persp = Matrix4x4.Perspective(45, 1.6f, 1, 1000);
         Matrix4x4 view = viewingMatrix(new Vector3(0,0,10), new Vector3(0,0,0), new Vector3(0,1,0));
-        Matrix4x4 world = rotationMatrix(rotationAxis, angle) /** translateMatrix(new Vector3(2,3,5))*/;
+        Matrix4x4 world = rotationMatrix(rotationAxis, angle);
         Matrix4x4 overall = persp * view * world;
 
-        //cube = applyTranslateMatrix(cube, -5f, 5f, 0f);
-       // cube = applyRotationMatrix(cube);
-        //cube = applyTranslateMatrix(cube, 5f, -5f, 0f);
-
         drawCube(divideByZ( MatrixTransform(cube, overall)));
-        //drawCube(cube);
-
-        //floodFill(resWidth / 2, resHeight / 2, Color.green, defaultColour, screen);
 
         screen.Apply();
     }
